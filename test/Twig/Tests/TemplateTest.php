@@ -194,11 +194,13 @@ class Twig_Tests_TemplateTest extends PHPUnit_Framework_TestCase
     public function getGetAttributeTests()
     {
         $array = array(
-            'defined' => 'defined',
-            'zero'    => 0,
-            'null'    => null,
-            '1'       => 1,
-            'bar'     => true,
+            'defined'   => 'defined',
+            'zero'      => 0,
+            'null'      => null,
+            '1'         => 1,
+            'bar'       => true,
+            'some_prop' => 'some_prop',
+            'camelCase' => 'camel_case',
         );
 
         $objectArray         = new Twig_TemplateArrayAccessObject();
@@ -216,14 +218,16 @@ class Twig_Tests_TemplateTest extends PHPUnit_Framework_TestCase
 
         $basicTests = array(
             // array(defined, value, property to fetch)
-            array(true,  'defined', 'defined'),
-            array(false, null,      'undefined'),
-            array(false, null,      'protected'),
-            array(true,  0,         'zero'),
-            array(true,  1,         1),
-            array(true,  1,         1.0),
-            array(true,  null,      'null'),
-            array(true,  true,      'bar'),
+            array(true,  'defined',    'defined'),
+            array(false, null,         'undefined'),
+            array(false, null,         'protected'),
+            array(true,  0,            'zero'),
+            array(true,  1,            1),
+            array(true,  1,            1.0),
+            array(true,  null,         'null'),
+            array(true,  true,         'bar'),
+            array(true,  'some_prop',  'some_prop'),
+            array(true,  'camel_case', 'camelCase'),
         );
         $testObjects = array(
             // array(object, type of fetch)
@@ -289,6 +293,34 @@ class Twig_Tests_TemplateTest extends PHPUnit_Framework_TestCase
             array(false, null, $methodAndPropObject, 'c', array(), $methodType),
             array(false, null, $methodAndPropObject, 'c', array(), $arrayType),
 
+            array(true, 'd', $methodAndPropObject, 'd_priv', array(), $anyType),
+            array(true, 'd', $methodAndPropObject, 'd_priv', array(), $methodType),
+            array(false, null, $methodAndPropObject, 'd_priv', array(), $arrayType),
+
+            array(true, 'e_pub', $methodAndPropObject, 'e_pub', array(), $anyType),
+            array(true, 'e', $methodAndPropObject, 'ePub', array(), $anyType),
+            array(true, 'e', $methodAndPropObject, 'e_pub', array(), $methodType),
+            array(true, 'e', $methodAndPropObject, 'e_pub', array(), $methodType),
+            array(false, null, $methodAndPropObject, 'e_pub', array(), $arrayType),
+
+            array(false, null, $methodAndPropObject, 'f_priv', array(), $anyType),
+            array(false, null, $methodAndPropObject, 'f_priv', array(), $methodType),
+            array(false, null, $methodAndPropObject, 'f_priv', array(), $arrayType),
+
+            array(true, 'g', $methodAndPropObject, 'g_camel_case', array(), $anyType),
+            array(true, 'g', $methodAndPropObject, 'g_camel_case', array(), $methodType),
+            array(false, null, $methodAndPropObject, 'g_camel_case', array(), $arrayType),
+
+            array(true, 'h_camel_case', $methodAndPropObject, 'h_camel_case', array(), $anyType),
+            array(true, 'h_camel_case', $methodAndPropObject, 'hCamelCase', array(), $anyType),
+            array(true, 'h', $methodAndPropObject, 'h_camel_case', array(), $methodType),
+            array(true, 'h', $methodAndPropObject, 'hCamelCase', array(), $methodType),
+            array(false, null, $methodAndPropObject, 'h_camel_case', array(), $arrayType),
+
+            array(false, null, $methodAndPropObject, 'i_camel_case', array(), $anyType),
+            array(false, null, $methodAndPropObject, 'i_camel_case', array(), $methodType),
+            array(false, null, $methodAndPropObject, 'i_camel_case', array(), $arrayType),
+
         ));
 
         // tests when input is not an array or object
@@ -343,6 +375,16 @@ class Twig_TemplateTest extends Twig_Template
         return true;
     }
 
+    public function getSomeProp()
+    {
+        return 'some_prop';
+    }
+
+    public function getCamelCase()
+    {
+        return 'camel_case';
+    }
+
     public function getTemplateName()
     {
     }
@@ -375,11 +417,13 @@ class Twig_TemplateArrayAccessObject implements ArrayAccess
     protected $protected = 'protected';
 
     public $attributes = array(
-        'defined' => 'defined',
-        'zero'    => 0,
-        'null'    => null,
-        '1'       => 1,
-        'bar'     => true,
+        'defined'   => 'defined',
+        'zero'      => 0,
+        'null'      => null,
+        '1'         => 1,
+        'bar'       => true,
+        'some_prop' => 'some_prop',
+        'camelCase' => 'camel_case',
     );
 
     public function offsetExists($name)
@@ -406,10 +450,12 @@ class Twig_TemplateMagicPropertyObject
     public $defined = 'defined';
 
     public $attributes = array(
-        'zero'    => 0,
-        'null'    => null,
-        '1'       => 1,
-        'bar'     => true,
+        'zero'      => 0,
+        'null'      => null,
+        '1'         => 1,
+        'bar'       => true,
+        'some_prop' => 'some_prop',
+        'camelCase' => 'camel_case',
     );
 
     protected $protected = 'protected';
@@ -427,10 +473,12 @@ class Twig_TemplateMagicPropertyObject
 
 class Twig_TemplatePropertyObject
 {
-    public $defined = 'defined';
-    public $zero    = 0;
-    public $null    = null;
-    public $bar     = true;
+    public $defined   = 'defined';
+    public $zero      = 0;
+    public $null      = null;
+    public $bar       = true;
+    public $some_prop = 'some_prop';
+    public $camelCase = 'camel_case';
 
     protected $protected = 'protected';
 }
@@ -502,6 +550,16 @@ class Twig_TemplateMethodObject
     {
         return 'static';
     }
+
+    public function getSomeProp()
+    {
+        return 'some_prop';
+    }
+
+    public function getCamelCase()
+    {
+        return 'camel_case';
+    }
 }
 
 class Twig_TemplateMethodAndPropObject
@@ -522,6 +580,42 @@ class Twig_TemplateMethodAndPropObject
     private function getC()
     {
         return 'c';
+    }
+
+    private $d_priv = 'd_priv';
+    public function getDPriv()
+    {
+        return 'd';
+    }
+
+    public $e_pub = 'e_pub';
+    public function getEPub()
+    {
+        return 'e';
+    }
+
+    private $f_priv = 'f_priv';
+    private function getFPriv()
+    {
+        return 'f';
+    }
+
+    private $gCamelCase = 'g_camel_case';
+    public function getGCamelCase()
+    {
+        return 'g';
+    }
+
+    public $hCamelCase = 'h_camel_case';
+    public function getHCamelCase()
+    {
+        return 'h';
+    }
+
+    private $iCamelCase = 'i_camel_case';
+    private function getICamelCase()
+    {
+        return 'i';
     }
 }
 

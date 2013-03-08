@@ -879,19 +879,6 @@ PHP_FUNCTION(twig_template_get_attributes)
 /*
 	// object property
 	if (Twig_TemplateInterface::METHOD_CALL !== $type) {
-		if (isset(self::$cache[$class]['properties'][$item])
-			|| isset($object->$item) || array_key_exists($item, $object)
-		) {
-			if ($isDefinedTest) {
-				return true;
-			}
-			if ($this->env->hasExtension('sandbox')) {
-				$this->env->getExtension('sandbox')->checkPropertyAllowed($object, $item);
-			}
-
-			return $object->$item;
-		}
-	}
 */
 	if (strcmp("method", type) != 0) {
 		zval *tmp_class, *tmp_properties, *tmp_item;
@@ -903,6 +890,21 @@ PHP_FUNCTION(twig_template_get_attributes)
 		tmp_item = TWIG_GET_ARRAY_ELEMENT(tmp_properties, item, item_len TSRMLS_CC);
 
 		efree(class_name);
+/*
+		if (isset(self::$cache[$class]['properties'][$item])
+			|| isset($object->$item) || array_key_exists($item, $object)
+		) {
+			if ($isDefinedTest) {
+				return true;
+			}
+
+			if ($this->env->hasExtension('sandbox')) {
+				$this->env->getExtension('sandbox')->checkPropertyAllowed($object, $item);
+			}
+
+			return $object->$item;
+        }
+*/
 
 		if (tmp_item || TWIG_HAS_PROPERTY(object, &zitem TSRMLS_CC) || TWIG_HAS_DYNAMIC_PROPERTY(object, item, item_len TSRMLS_CC)) {
 			if (isDefinedTest) {
@@ -918,7 +920,64 @@ PHP_FUNCTION(twig_template_get_attributes)
 			ret = TWIG_PROPERTY(object, &zitem TSRMLS_CC);
 			RETURN_ZVAL(ret, 1, 0);
 		}
-	}
+/*
+        } elseif (false !== strpos('_', $item)) {
+            $camelCase = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', strtolower($item)))));
+            if ($camelCase !== $item && (isset($object->$camelCase) || array_key_exists($camelCase, $object))) {
+                if ($isDefinedTest) {
+                    return true;
+                }
+
+                if ($this->env->hasExtension('sandbox')) {
+                    $this->env->getExtension('sandbox')->checkPropertyAllowed($object, $item);
+                }
+
+                return $object->$camelCase;
+            }
+		}
+*/
+        else if (strstr(item, "_")) {
+            char *lcItem = TWIG_STRTOLOWER(item, item_len);
+            char *camelCase = emalloc(1 + item_len);
+            int   camelCase_len;
+            char *result = NULL;
+
+            result = strtok(lcItem, "_");
+            if (result != NULL) {
+                strcpy(camelCase, result);
+                result = strtok(NULL, "_");
+            }
+            while (result != NULL) {
+                result[0] = toupper(result[0]);
+                strcat(camelCase, result);
+                result = strtok(NULL, "_");
+            }
+
+            if (strcmp(lcItem, camelCase) != 0) {
+                zval zcamelCase;
+                camelCase_len = strlen(camelCase);
+
+                INIT_PZVAL(&zcamelCase);
+                ZVAL_STRINGL(&zcamelCase, camelCase, camelCase_len, 0);
+
+                if (TWIG_HAS_PROPERTY(object, &zcamelCase TSRMLS_CC) || TWIG_HAS_DYNAMIC_PROPERTY(object, camelCase, camelCase_len TSRMLS_CC)) {
+
+                    if (isDefinedTest) {
+                        RETURN_TRUE;
+                    }
+                    if (TWIG_CALL_SB(TWIG_PROPERTY_CHAR(template, "env" TSRMLS_CC), "hasExtension", "sandbox" TSRMLS_CC)) {
+                        TWIG_CALL_ZZ(TWIG_CALL_S(TWIG_PROPERTY_CHAR(template, "env" TSRMLS_CC), "getExtension", "sandbox" TSRMLS_CC), "checkPropertyAllowed", object, &zcamelCase TSRMLS_CC);
+                    }
+                    if (EG(exception)) {
+                        return;
+                    }
+
+                    ret = TWIG_PROPERTY(object, &zcamelCase TSRMLS_CC);
+                    RETURN_ZVAL(ret, 1, 0);
+                }
+            }
+        }
+	} // end if (strcmp("method", type) != 0)
 /*
 	// object method
 	$lcItem = strtolower($item);
@@ -961,34 +1020,83 @@ PHP_FUNCTION(twig_template_get_attributes)
 		} else if (TWIG_GET_ARRAY_ELEMENT(tmp_methods, "__call", 6 TSRMLS_CC)) {
 			method = item;
 /*
-	} else {
-		if ($isDefinedTest) {
-			return false;
+    } else {
+        $method = null;
+        $strippedItem = str_replace('_', '', strtolower($item));
+        if ($strippedItem !== $item) {
+            if (isset(self::$cache[$class]['methods'][$strippedItem])) {
+                $method = $strippedItem;
+            } elseif (isset(self::$cache[$class]['methods']['get'.$strippedItem])) {
+                $method = 'get'.$strippedItem;
+            } elseif (isset(self::$cache[$class]['methods']['is'.$strippedItem])) {
+                $method = 'is'.$strippedItem;
+            }
+        }
+
+        if (null === $method) {
+            if ($isDefinedTest) {
+                return false;
+            }
+
+            if ($ignoreStrictCheck || !$this->env->isStrictVariables()) {
+                return null;
+            }
+
+            throw new Twig_Error_Runtime(sprintf('Method "%s" for object "%s" does not exist', $item, get_class($object)), -1, $this->getTemplateName());
+        }
+    }
+*/
+		} else {
+            char *stripped = emalloc(1 + item_len);
+            int   stripped_len;
+            char *result = NULL;
+
+            result = strtok(lcItem, "_");
+            if (result != NULL) {
+                strcpy(stripped, result);
+                result = strtok(NULL, "_");
+            }
+            while (result != NULL) {
+                strcat(stripped, result);
+                result = strtok(NULL, "_");
+            }
+
+            if (strcmp(stripped, lcItem) != 0) {
+                stripped_len = strlen(stripped);
+                sprintf(tmp_method_name_get, "get%s", stripped);
+                sprintf(tmp_method_name_is, "is%s", stripped);
+
+                if (TWIG_GET_ARRAY_ELEMENT(tmp_methods, stripped, stripped_len TSRMLS_CC)) {
+                    method = item;
+                } else if (TWIG_GET_ARRAY_ELEMENT(tmp_methods, tmp_method_name_get, stripped_len + 3 TSRMLS_CC)) {
+                    method = tmp_method_name_get;
+                } else if (TWIG_GET_ARRAY_ELEMENT(tmp_methods, tmp_method_name_is, stripped_len + 2 TSRMLS_CC)) {
+                    method = tmp_method_name_is;
+                }
+            }
+
+            if (method == NULL) {
+                efree(tmp_method_name_get);
+                efree(tmp_method_name_is);
+                efree(lcItem);
+                efree(stripped);
+
+                if (isDefinedTest) {
+                    RETURN_FALSE;
+                }
+                if (ignoreStrictCheck || !TWIG_CALL_BOOLEAN(TWIG_PROPERTY_CHAR(template, "env" TSRMLS_CC), "isStrictVariables" TSRMLS_CC)) {
+                    return;
+                }
+                TWIG_RUNTIME_ERROR(template TSRMLS_CC, "Method \"%s\" for object \"%s\" does not exist", item, TWIG_GET_CLASS_NAME(object TSRMLS_CC));
+                return;
+            }
 		}
-		if ($ignoreStrictCheck || !$this->env->isStrictVariables()) {
-			return null;
-		}
-		throw new Twig_Error_Runtime(sprintf('Method "%s" for object "%s" does not exist', $item, get_class($object)));
-	}
+
+/*
 	if ($isDefinedTest) {
 		return true;
 	}
 */
-		} else {
-			efree(tmp_method_name_get);
-			efree(tmp_method_name_is);
-			efree(lcItem);
-
-			if (isDefinedTest) {
-				RETURN_FALSE;
-			}
-			if (ignoreStrictCheck || !TWIG_CALL_BOOLEAN(TWIG_PROPERTY_CHAR(template, "env" TSRMLS_CC), "isStrictVariables" TSRMLS_CC)) {
-				return;
-			}
-			TWIG_RUNTIME_ERROR(template TSRMLS_CC, "Method \"%s\" for object \"%s\" does not exist", item, TWIG_GET_CLASS_NAME(object TSRMLS_CC));
-			return;
-		}
-
 		if (isDefinedTest) {
 			efree(tmp_method_name_get);
 			efree(tmp_method_name_is);

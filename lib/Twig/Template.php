@@ -395,6 +395,19 @@ abstract class Twig_Template implements Twig_TemplateInterface
                 }
 
                 return $object->$item;
+            } elseif (false !== strpos($item, '_')) {
+                $camelCase = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', strtolower($item)))));
+                if ($camelCase !== $item && (isset($object->$camelCase) || array_key_exists($camelCase, $object))) {
+                    if ($isDefinedTest) {
+                        return true;
+                    }
+
+                    if ($this->env->hasExtension('sandbox')) {
+                        $this->env->getExtension('sandbox')->checkPropertyAllowed($object, $item);
+                    }
+
+                    return $object->$camelCase;
+                }
             }
         }
 
@@ -413,15 +426,29 @@ abstract class Twig_Template implements Twig_TemplateInterface
         } elseif (isset(self::$cache[$class]['methods']['__call'])) {
             $method = $item;
         } else {
-            if ($isDefinedTest) {
-                return false;
+            $method = null;
+            $strippedItem = str_replace('_', '', strtolower($item));
+            if ($strippedItem !== $item) {
+                if (isset(self::$cache[$class]['methods'][$strippedItem])) {
+                    $method = $strippedItem;
+                } elseif (isset(self::$cache[$class]['methods']['get'.$strippedItem])) {
+                    $method = 'get'.$strippedItem;
+                } elseif (isset(self::$cache[$class]['methods']['is'.$strippedItem])) {
+                    $method = 'is'.$strippedItem;
+                }
             }
 
-            if ($ignoreStrictCheck || !$this->env->isStrictVariables()) {
-                return null;
-            }
+            if (null === $method) {
+                if ($isDefinedTest) {
+                    return false;
+                }
 
-            throw new Twig_Error_Runtime(sprintf('Method "%s" for object "%s" does not exist', $item, get_class($object)), -1, $this->getTemplateName());
+                if ($ignoreStrictCheck || !$this->env->isStrictVariables()) {
+                    return null;
+                }
+
+                throw new Twig_Error_Runtime(sprintf('Method "%s" for object "%s" does not exist', $item, get_class($object)), -1, $this->getTemplateName());
+            }
         }
 
         if ($isDefinedTest) {

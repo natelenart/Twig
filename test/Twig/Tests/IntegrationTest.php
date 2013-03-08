@@ -47,6 +47,8 @@ class TwigTestFoo implements Iterator
 
     public $position = 0;
     public $array = array(1, 2);
+    private $foo_bar = 'foo_bar';
+    public $underscore_pub = 'underscore_pub';
 
     public function bar($param1 = null, $param2 = null)
     {
@@ -76,6 +78,11 @@ class TwigTestFoo implements Iterator
     public function not()
     {
         return 'not';
+    }
+
+    public function getFooBar()
+    {
+        return 'foo_bar';
     }
 
     public function strToLower($value)

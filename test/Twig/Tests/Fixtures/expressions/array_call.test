@@ -5,10 +5,14 @@ Twig supports method calls
 {{ items['foo'] }}
 {{ items[foo] }}
 {{ items[items[foo]] }}
+{{ items.foo_bar }}
+{{ items['foo_bar'] }}
 --DATA--
-return array('foo' => 'bar', 'items' => array('foo' => 'bar', 'bar' => 'foo'))
+return array('foo' => 'bar', 'items' => array('foo' => 'bar', 'bar' => 'foo', 'foo_bar' => 'foo_bar'))
 --EXPECT--
 bar
 bar
 foo
 bar
+foo_bar
+foo_bar
