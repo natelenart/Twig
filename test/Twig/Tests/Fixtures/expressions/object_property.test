@@ -1,0 +1,14 @@
+--TEST--
+Twig supports calling public properties on objects
+--TEMPLATE--
+{{ items.foo.underscore_pub }}
+{{ items.foo.camel_case_key }}
+{{ items.foo.camelCaseKey }}
+--DATA--
+return array('foo' => 'bar', 'items' => array('foo' => new TwigTestFoo(), 'bar' => 'foo'))
+--CONFIG--
+return array('strict_variables' => false)
+--EXPECT--
+underscore_pub
+camelCaseValue
+camelCaseValue

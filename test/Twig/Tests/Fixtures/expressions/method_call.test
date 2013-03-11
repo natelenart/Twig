@@ -12,7 +12,6 @@ Twig supports method calls
 {{ items.foo.in }}
 {{ items.foo.not }}
 {{ items.foo.foo_bar }}
-{{ items.foo.underscore_pub }}
 --DATA--
 return array('foo' => 'bar', 'items' => array('foo' => new TwigTestFoo(), 'bar' => 'foo'))
 --CONFIG--
@@ -29,4 +28,3 @@ is
 in
 not
 foo_bar
-underscore_pub

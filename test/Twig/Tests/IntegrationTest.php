@@ -49,6 +49,7 @@ class TwigTestFoo implements Iterator
     public $array = array(1, 2);
     private $foo_bar = 'foo_bar';
     public $underscore_pub = 'underscore_pub';
+    public $camelCaseKey = 'camelCaseValue';
 
     public function bar($param1 = null, $param2 = null)
     {
